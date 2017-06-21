@@ -45,6 +45,7 @@ given an interactive menu.
     parser.add_option('-l', '--list', action="store_true", dest="show_list", default=False, help='show list')
     parser.add_option('-r', '--resource-file', dest='resource_file', type='string', help='resource file')
     parser.add_option('-m', '--preserve-mac', action="store_true", dest="preserve_mac", default=False, help='preserve mac address')
+    parser.add_option('--same-server', action="store_true", dest="same_server", default=False, help='start all vms on the same server')
 
     (options, args) = parser.parse_args()
 
@@ -56,6 +57,7 @@ given an interactive menu.
     show_list = options.show_list
     resource_file = options.resource_file
     preserve_mac = options.preserve_mac
+    same_server = options.same_server
 
     # slash required since xenserver's folder value has preceding slash, using try
     # block since this will error if --scenario is not passed
@@ -65,7 +67,7 @@ given an interactive menu.
     except:
         scenario = None
 
-    return server, username, password, scenario, vlan, delete, show_list, resource_file, preserve_mac
+    return server, username, password, scenario, vlan, delete, show_list, resource_file, preserve_mac, same_server
 
 def get_session(server, username, password):
     
@@ -303,7 +305,7 @@ def get_folders(session, vms):
             pass
     return folders
 
-def start_vms_on_same_host(clones, session):
+def start_vms(clones, session, same_server):
     # allowing xen to determine best server to start first VM
     session.xenapi.VM.start(clones[0], False, True)
     vm_rec = session.xenapi.VM.get_record(clones[0])
@@ -314,8 +316,11 @@ def start_vms_on_same_host(clones, session):
         vm_rec = session.xenapi.VM.get_record(vm)
         try:
             for i in range(3):
-                session.xenapi.VM.start_on(vm, host, False, True)
-                print "Starting " + vm_rec['name_label']
+                if same_server:
+                    session.xenapi.VM.start_on(vm, host, False, True)
+                    print "Starting " + vm_rec['name_label']
+                else:
+                    session.xenapi.VM.start(vm, False, True)
         except Exception, e:
             #print e
             pass
@@ -323,7 +328,7 @@ def start_vms_on_same_host(clones, session):
 
 def main():
     
-    server, username, password, scenario, vlan, delete, show_list, resource_file, preserve_mac = get_options()
+    server, username, password, scenario, vlan, delete, show_list, resource_file, preserve_mac, same_server = get_options()
     
     # include switches to pass info directly 
     if not server:
@@ -389,7 +394,7 @@ def main():
         # write an info file with vm names, new networks, and vlan information
         write_resource_file(session, clones, unique_id, vlan, new_networks)
         
-        start_vms_on_same_host(clones, session)
+        start_vms(clones, session, same_server)
 if __name__ == '__main__':
     main()
 
