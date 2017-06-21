@@ -303,18 +303,19 @@ def get_folders(session, vms):
             pass
     return folders
 
-def start_vms_on_same_host():
+def start_vms_on_same_host(clones, session):
     # allowing xen to determine best server to start first VM
-    vm = session.xenapi.VM.start(clones[0])
-    vm_rec = session.xenapi.VM.get_record(vm)
+    session.xenapi.VM.start(clones[0], False, True)
+    vm_rec = session.xenapi.VM.get_record(clones[0])
     host = vm_rec['resident_on']
 
     # trying really hard to start VMs
     for vm in clones[1:]:
+        vm_rec = session.xenapi.VM.get_record(vm)
         try:
             for i in range(3):
                 session.xenapi.VM.start_on(vm, host, False, True)
-                print "Starting " + session.xenapi.VM.get_record(vm)['name_label']
+                print "Starting " + vm_rec['name_label']
         except Exception, e:
             #print e
             pass
@@ -388,7 +389,7 @@ def main():
         # write an info file with vm names, new networks, and vlan information
         write_resource_file(session, clones, unique_id, vlan, new_networks)
         
-        start_vms_on_same_host(clones)
+        start_vms_on_same_host(clones, session)
 if __name__ == '__main__':
     main()
 
