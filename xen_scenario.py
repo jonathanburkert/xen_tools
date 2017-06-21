@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# test comment
 
 import XenAPI, sys, re, optparse, random, time
 
